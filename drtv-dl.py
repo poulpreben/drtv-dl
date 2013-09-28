@@ -40,18 +40,32 @@ def downloadDRTV(url, output=None):
 
     # find the highest bitrate
     bitrates = []
-    for i in range(len(jsonData["Data"][0]['Assets'][0]["Links"])):
-        bitrates.append(jsonData["Data"][0]['Assets'][0]["Links"][i]['Bitrate'])
+    try:
+        for i in range(len(jsonData["Data"][0]['Assets'][0]["Links"])):
+            bitrates.append(jsonData["Data"][0]['Assets'][0]["Links"][i]['Bitrate'])
+    except KeyError:
+        # json data is different (hot fix, should be replaced in the future)
+        for i in range(len(jsonData["Data"][0]['Assets'][1]["Links"])):
+            bitrates.append(jsonData["Data"][0]['Assets'][1]["Links"][i]['Bitrate'])
+
 
     print 'Highest bitrate found was: ' + str(max(bitrates))
 
     # find the stream url
     streamUrl = None
-    for i in range(len(jsonData["Data"][0]['Assets'][0]["Links"])):
-        if jsonData["Data"][0]['Assets'][0]["Links"][i]['Target'] == 'Streaming' and jsonData["Data"][0]['Assets'][0]["Links"][i]['Bitrate'] == max(bitrates):
+    try:
+        for i in range(len(jsonData["Data"][0]['Assets'][0]["Links"])):
+            if jsonData["Data"][0]['Assets'][0]["Links"][i]['Target'] == 'Streaming' and jsonData["Data"][0]['Assets'][0]["Links"][i]['Bitrate'] == max(bitrates):
 
-            streamUrl = jsonData["Data"][0]['Assets'][0]["Links"][i]['Uri']
-            break
+                streamUrl = jsonData["Data"][0]['Assets'][0]["Links"][i]['Uri']
+                break
+    except KeyError:
+        # json data is different (hot fix, should be replaced in the future)
+        for i in range(len(jsonData["Data"][0]['Assets'][1]["Links"])):
+            if jsonData["Data"][0]['Assets'][1]["Links"][i]['Target'] == 'Streaming' and jsonData["Data"][0]['Assets'][1]["Links"][i]['Bitrate'] == max(bitrates):
+
+                streamUrl = jsonData["Data"][0]['Assets'][1]["Links"][i]['Uri']
+                break
 
     if streamUrl is not None:
         print 'Found video file. Downloading...'
