@@ -1,13 +1,21 @@
 #!/usr/bin/env python
 
-import urllib
+try:
+    import urllib.request as urllib
+except ImportError:
+    # python2 compatibility
+    # probably not the best way to ensure compatibility, but it works - for now
+    import urllib
+
 import sys
 import json
-
 import argparse
 
 def parseString(data, findStart, findEnd):
     ''' returns string between findStart and findEnd '''
+
+    # decode
+    data = data.decode('utf-8')
 
     start = data.find(findStart) + len(findStart)
     end = data.find(findEnd, start)
@@ -16,7 +24,7 @@ def parseString(data, findStart, findEnd):
 
 def getUrlContent(url):
     page = urllib.urlopen(url)
-    content = str(page.read())
+    content = page.read()
 
     return content
 
@@ -28,28 +36,30 @@ def gatherInformation(jsonData):
     return data
 
 def downloadDRTV(url, output=None):
-    print 'Finding json data URL...'
+    print('Finding json data URL...')
     # find json data
     siteContent = getUrlContent(url)
     jsonUrl = parseString(siteContent, 'resource: "', '"')
+    print('- Resource file find: ' + jsonUrl)
 
-    print 'Finding the video file...'
+    print('Finding the video file...')
     # get json data
     jsonContent = getUrlContent(jsonUrl)
-    jsonData = json.loads(jsonContent)
+    jsonData = json.loads(jsonContent.decode('utf-8'))
 
     # find the highest bitrate
     bitrates = []
     try:
         for i in range(len(jsonData["Data"][0]['Assets'][0]["Links"])):
-            bitrates.append(jsonData["Data"][0]['Assets'][0]["Links"][i]['Bitrate'])
+            if "Bitrate" in jsonData["Data"][0]['Assets'][0]['Links'][i]:
+                bitrates.append(jsonData["Data"][0]['Assets'][0]["Links"][i]['Bitrate'])
     except KeyError:
         # json data is different (hot fix, should be replaced in the future)
         for i in range(len(jsonData["Data"][0]['Assets'][1]["Links"])):
-            bitrates.append(jsonData["Data"][0]['Assets'][1]["Links"][i]['Bitrate'])
+            if 'Bitrate' in jsonData['Data'][0]['Assets'][1]['Links'][i]:
+                bitrates.append(jsonData["Data"][0]['Assets'][1]["Links"][i]['Bitrate'])
 
-
-    print 'Highest bitrate found was: ' + str(max(bitrates))
+    print('Highest bitrate found was: ' + str(max(bitrates)))
 
     # find the stream url
     streamUrl = None
@@ -68,9 +78,10 @@ def downloadDRTV(url, output=None):
                 break
 
     if streamUrl is not None:
-        print 'Found video file. Downloading...'
+        print('- Video file found: ' + str(streamUrl))
+        print('Downloading...')
     else:
-        print 'An error occured while finding the download URL. Exiting'
+        print('An error occured while fetching the download URL. Exiting')
         sys.exit()
 
     # replace some text in the url
