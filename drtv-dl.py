@@ -30,19 +30,26 @@ def getUrlContent(url):
 
 def gatherInformation(jsonData):
     data = {}
-
     data['title'] = jsonData["Data"][0]['Title']
 
     return data
+
+def _reportHook(count, block_size, total_size):
+    ''' progress bar for urlretrieve '''
+    percent = int(count*block_size*100/total_size)
+    # progress_size = int(count*block_size) # currently not in use. use it for downloaded mb later
+    # sys.stdout.write("\rDownloading...%d%%, %d MB" % (percent, progress_size/(1024*1024)))
+    sys.stdout.write("\rDownloading...%d%%" % percent)
+    sys.stdout.flush()
 
 def downloadDRTV(url, output=None):
     print('Finding json data URL...')
     # find json data
     siteContent = getUrlContent(url)
     jsonUrl = parseString(siteContent, 'resource: "', '"')
-    print('- Resource file find: ' + jsonUrl)
+    print('- Resource file found: ' + jsonUrl)
 
-    print('Finding the video file...')
+    print('Finding video file...')
     # get json data
     jsonContent = getUrlContent(jsonUrl)
     jsonData = json.loads(jsonContent.decode('utf-8'))
@@ -59,7 +66,7 @@ def downloadDRTV(url, output=None):
             if 'Bitrate' in jsonData['Data'][0]['Assets'][1]['Links'][i]:
                 bitrates.append(jsonData["Data"][0]['Assets'][1]["Links"][i]['Bitrate'])
 
-    print('Highest bitrate found was: ' + str(max(bitrates)))
+    print('Highest bitrate found: ' + str(max(bitrates)))
 
     # find the stream url
     streamUrl = None
@@ -79,7 +86,7 @@ def downloadDRTV(url, output=None):
 
     if streamUrl is not None:
         print('- Video file found: ' + str(streamUrl))
-        print('Downloading...')
+        print('Starting download...')
     else:
         print('An error occured while fetching the download URL. Exiting')
         sys.exit()
@@ -92,9 +99,11 @@ def downloadDRTV(url, output=None):
 
     # download the film
     if output is None:
-        urllib.urlretrieve(streamUrl, filmData['title'] + '.mp4')
+        urllib.urlretrieve(streamUrl, filmData['title'] + '.mp4', reporthook=_reportHook)
     else:
-        urllib.urlretrieve(streamUrl, output)
+        urllib.urlretrieve(streamUrl, output, reporthook=_reportHook)
+
+    print('Download finished! Quitting')
 
 if __name__ == '__main__':
     # init parser
