@@ -56,34 +56,33 @@ def downloadDRTV(url, output=None):
 
     # find the highest bitrate
     bitrates = []
+    stream_urls = {}
     try:
-        for i in range(len(jsonData["Data"][0]['Assets'][0]["Links"])):
-            if "Bitrate" in jsonData["Data"][0]['Assets'][0]['Links'][i]:
-                bitrates.append(jsonData["Data"][0]['Assets'][0]["Links"][i]['Bitrate'])
-    except KeyError:
-        # json data is different (hot fix, should be replaced in the future)
-        for i in range(len(jsonData["Data"][0]['Assets'][1]["Links"])):
-            if 'Bitrate' in jsonData['Data'][0]['Assets'][1]['Links'][i]:
-                bitrates.append(jsonData["Data"][0]['Assets'][1]["Links"][i]['Bitrate'])
+        # loop through json to find correct list
+        for data in jsonData['Data'][0]['Assets']:
+            if 'Links' in data:
+                # we found it, now lets find the different bitrates and pair them with the stream urls
+                for i in range(len(data['Links'])):
+                    if 'Bitrate' in data['Links'][i]:
+
+                        # make sure this is for pc streaming
+                        if data['Links'][i]['Target'] == 'Streaming':
+                            temp_bitrate = data['Links'][i]['Bitrate']
+                            temp_streamurl = data['Links'][i]['Uri']
+
+                            bitrates.append(temp_bitrate)
+                            stream_urls[temp_bitrate] = temp_streamurl
+
+                # todo: make sure we found a bitrate
+                break
+    except:
+        # todo: error handling
+        print("Error occured while parsing JSON. Quitting")
+        sys.exit()
 
     print('Highest bitrate found: ' + str(max(bitrates)))
 
-    # find the stream url
-    streamUrl = None
-    try:
-        for i in range(len(jsonData["Data"][0]['Assets'][0]["Links"])):
-            if jsonData["Data"][0]['Assets'][0]["Links"][i]['Target'] == 'Streaming' and jsonData["Data"][0]['Assets'][0]["Links"][i]['Bitrate'] == max(bitrates):
-
-                streamUrl = jsonData["Data"][0]['Assets'][0]["Links"][i]['Uri']
-                break
-    except KeyError:
-        # json data is different (hot fix, should be replaced in the future)
-        for i in range(len(jsonData["Data"][0]['Assets'][1]["Links"])):
-            if jsonData["Data"][0]['Assets'][1]["Links"][i]['Target'] == 'Streaming' and jsonData["Data"][0]['Assets'][1]["Links"][i]['Bitrate'] == max(bitrates):
-
-                streamUrl = jsonData["Data"][0]['Assets'][1]["Links"][i]['Uri']
-                break
-
+    streamUrl = stream_urls[max(bitrates)]
     if streamUrl is not None:
         print('- Video file found: ' + str(streamUrl))
         print('Starting download...')
